@@ -5,6 +5,8 @@ import numpy as np
 from sklearn.manifold import spectral_embedding
 import sys
 import labelEncoder
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 # All Cora data is stored as pickle
 def pickle_read(path):
@@ -59,5 +61,17 @@ print("Dimensionality: ", dimension)
 dataSet = labelEncoder.labelEncoder(spectral, dimension)
 
 print(dataSet)
+# if dimension == 4:
+#     fig = plt.figure()
+#     ax = fig.add_subplot(111, projection="3d")
+#     img = ax.scatter(
+#         dataSet[0],
+#         dataSet[1],
+#         dataSet[2],
+#         dataSet[3],
+#     )
+#     fig.colorbar(img)
+#     plt.show()
+
 
 pickle_save(savePath + "/dataSet.npy", dataSet)

@@ -155,16 +155,22 @@ def plottingROC(clf, clf_fpr, clf_tpr, r_fpr, r_tpr, r_auc, clf_auc, methodName)
 
 def roc_curve_processor(clf, X_test, y_test, methodName):
     print("rocCurveCalled")
+    # print("passedclf is", clf)
     fprVal, tprVal, r_fpr, r_tpr, r_auc, clf_auc = fprtprCalulator(clf, X_test, y_test)
+    print("fpris ", fprVal)
     plottingROC(clf, fprVal, tprVal, r_fpr, r_tpr, r_auc, clf_auc, methodName)
 
 
 def randomSamplingHandler(clf, trainRatio, numOfIter, dataSet, metric, posVal):
     stringResultList = []
     temporalDict = {}
+    finalDict = {}
+
+    if isinstance(metric, str):
+        metric = metric.split()
     for i in metric:
         temporalDict[i] = []
-
+    print(temporalDict)
     targetColumn = dataSet[:, -1:]
     classList = classGetter(targetColumn)
 
@@ -184,8 +190,29 @@ def randomSamplingHandler(clf, trainRatio, numOfIter, dataSet, metric, posVal):
     stringResultList.append(("------------------------"))
     stringResultList.append(("Num of Trials: " + str(numOfIter)))
 
+    def plotIteration(numOfIter):
+        for i in range(numOfIter):
+            if "rocauc" in metric:
+                methodName = "randomSampling"
+                roc_curve_processor(clf, X_test, y_test, methodName)
+
     for i in range(numOfIter):
 
+        X_train, X_test, y_train, y_test = dataSplitter(trainRatio, dataSet)
+        clf.fit(X_train, y_train)
+        # stringResultList.append(("Train ratio : " + str(trainRatio) + "% Done."))
+        # stringResultList.append(("------------------------"))
+        y_pred = clf.predict(X_test)
+
+        # plotIteration(numOfIter)
+        if "rocauc" in metric:
+            methodName = "randomSampling"
+            roc_curve_processor(clf, X_test, y_test, methodName)
+
+        # print(temporalList)
+        # Accumulate each metric values to dictionary
+
+    for v in range(numOfIter):
         X_train, X_test, y_train, y_test = dataSplitter(trainRatio, dataSet)
         clf.fit(X_train, y_train)
         stringResultList.append(("Train ratio : " + str(trainRatio) + "% Done."))
@@ -193,21 +220,25 @@ def randomSamplingHandler(clf, trainRatio, numOfIter, dataSet, metric, posVal):
         y_pred = clf.predict(X_test)
 
         if "rocauc" in metric:
-            methodName = "randomSampling"
-            roc_curve_processor(clf, X_test, y_test, methodName)
+            metric.remove("rocauc")
 
-    temporalList = metricExamine(metric, y_test, y_pred)
+        print(metric)
+        for j in range(len(metric)):
+            temporalList = metricExamine(metric, y_test, y_pred)
+            print(temporalList)
+            # print(metric)
+            # print(metric[j])
+            temporalDict[metric[j]].append(temporalList[j])
 
-    # Accumulate each metric values to dictionary
-    for j in range(len(temporalList)):
-        temporalDict[metric[j]].append(temporalList[j])
+        print(temporalDict)
 
-    # print(temporalDict)
-    values = temporalDict.values()
+        values = temporalDict.values()
+
+    print(values)
     for k, p in zip(values, range(len(metric))):
 
         temporalDict[metric[p]] = mean(k), std(k)
-        # print(type(temporalDict[metric[p]]))
+        # print(temporalDict[metric[p]])
 
     # print("after:", temporalDict)
 
@@ -235,11 +266,13 @@ def randomSamplingHandler(clf, trainRatio, numOfIter, dataSet, metric, posVal):
 
 def holdoutHandler(clf, trainRatio, X_train, X_test, y_train, y_test, metric):
     stringResultList = []
-
+    print("We landed holdout")
+    if isinstance(metric, str):
+        metric = metric.split()
     # Result show in console
     clf.fit(X_train, y_train)
     y_pred = clf.predict(X_test)
-
+    print("The initial metric is:", metric)
     stringResultList.append("Output from downstrem ML")
     stringResultList.append("------------------------")
     stringResultList.append("Method: holdout")
@@ -252,15 +285,28 @@ def holdoutHandler(clf, trainRatio, X_train, X_test, y_train, y_test, metric):
     # print("y_test: ", y_test)
     # print("y_pred: ", y_pred)
     temporalList = metricExamine(metric, y_test, y_pred)
+    print(stringResultList)
+    print(temporalList)
 
+    print("current metric is", metric)
     if "rocauc" in metric:
+        if "all" in metric:
+            metric.remove("all")
+        print("the clf is", clf)
         roc_curve_processor(clf, X_test, y_test, "holdout")
         metric.remove("rocauc")
 
+    print("after metric is: ", metric)
+    if isinstance(metric, str):
+        metric = metric.split()
+
     k = 0
-    for i in metric:
-        stringResultList.append(i + " : " + str(temporalList[k]))
-        k += 1
+    if len(metric) > 0:
+        for i in metric:
+            print("the i that will append", i)
+            stringResultList.append(i + " : " + str(temporalList[k]))
+            print(stringResultList)
+            k += 1
     # print("Accuracy Score:", metrics.accuracy_score(y_test, y_pred))
 
     return stringResultList
@@ -349,10 +395,13 @@ def supervisedHandler(dataSet, jsonDict, metric):
         # holdout
         if jsonDict["splitMethod"] == "holdout":
             trainRatio = 66
+
             X_train, X_test, y_train, y_test = dataSplitter(trainRatio, dataSet)
+
             stringResultList = holdoutHandler(
                 clf, trainRatio, X_train, X_test, y_train, y_test, metric
             )
+
         # kfold
         elif jsonDict["splitMethod"] == "kfold":
             stringResultList = kfoldHandler(
@@ -461,6 +510,7 @@ if "all" in jsonDict["metric"]:
 
 # Execute supervised machine learning algos
 if jsonDict["learningType"] == "supervised":
+
     txtAppender(supervisedHandler(dataSet, jsonDict, jsonDict["metric"]))
 else:
     unsupervisedHandler(dataSet, jsonDict, jsonDict["metric"])
