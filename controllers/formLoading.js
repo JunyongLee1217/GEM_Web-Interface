@@ -211,12 +211,18 @@ exports.getResultPage = (req, res, next) => {
       });
     } else {
       console.log("should've not come here");
+      let learningType = result.toString("utf8").split("\n")[0].split(" ")[0];
       let method = result.toString("utf8").split("\n")[3].split(" ")[1];
       let model = result.toString("utf8").split("\n")[5].split(/\s+/)[2];
-      if (model == "LogisticRegression()") model = "LogisticRegression";
-      if (model == "SVC(probability=True)") model = "SVC";
-      if (model == "KNeighborsClassifier()") model = "KNeighborsClassifier";
-      if (model == "DecisionTreeClassifier()") model = "DecisionTreeClassifier";
+      if (learningType == "Supervised") {
+        if (model.startsWith("LogisticRegression") == true)
+          model = "LogisticRegression";
+        if (model.startsWith("SVC") == true) model = "SVC";
+        if (model.startsWith("KNeighbors") == true)
+          model = "KNeighborsClassifier";
+        if (model.startsWith("DecisionTree") == true)
+          model = "DecisionTreeClassifier";
+      }
       console.log("model: ", model);
       console.log("method: ", method);
 
